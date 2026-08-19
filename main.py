@@ -105,7 +105,6 @@ def fetch_btc_analysis_detail():
         "1D (ภาพรวมวัน)": Interval.INTERVAL_1_DAY,
         "4H (จังหวะระยะสั้น)": Interval.INTERVAL_4_HOURS
     }
-    # 🛠️ แก้ไขข้อความ Header ให้เป็น บิทคอยน์ BTCUSD
     btc_report = "=== [การวิเคราะห์เจาะลึกบิทคอยน์ BTCUSD (CDC ActionZone + Stochastic 14, 3, 3)] ===\n"
     for tf_name, tf_interval in timeframes.items():
         try:
@@ -143,7 +142,6 @@ def fetch_btc_analysis_detail():
                 f"  - Stochastic (14, 3, 3): %K = {stoch_k:.2f}, %D = {stoch_d:.2f} [{stoch_status}]\n"
             )
         except Exception as e:
-            # 🛠️ แก้ไขกรณี Error ให้ระบุ BTCUSD
             btc_report += f"\n⚠️ ไม่สามารถดึงข้อมูล BTCUSD ({tf_name}) ได้: {e}\n"
     return btc_report
 
@@ -252,7 +250,6 @@ def run_investment_ai_pipeline():
     print("\n--- 🚀 เริ่มต้นกระบวนการวิเคราะห์การลงทุนระดับมืออาชีพ ---")
     portfolio_data = fetch_portfolio_data()
     gold_detailed_signals = fetch_gold_analysis_detail()
-    # 🛠️ ดึงสัญญาณวิเคราะห์เจาะลึก บิทคอยน์ (BTCUSD)
     btc_detailed_signals = fetch_btc_analysis_detail()
     raw_news_data = fetch_rss_news()
     youtube_insights = fetch_youtube_insights()
@@ -292,9 +289,14 @@ def run_investment_ai_pipeline():
 - ประเมินพอร์ตปัจจุบันของผู้ใช้ว่าสอดคล้องกับเป้าหมาย 'ชนะเงินเฟ้อ + เงินต้นไม่เสียหาย' มากน้อยเพียงใด
 - วิเคราะห์สัดส่วนสินทรัพย์เสี่ยงสูง (เช่น หุ้น, BTC) เทียบกับ สินทรัพย์ปลอดภัย/พักเงิน (KTB RMF1 / ตราสารหนี้ / ทองคำ)
 
-[PART 2: วิเคราะห์จังหวะเข้าลงทุนทองคำ (XAUUSD) และ บิทคอยน์ (BTCUSD)]
-- สรุปสถานะ CDC ActionZone (1D และ 4H) และ Stochastic (14, 3, 3) ของทั้งทองคำและบิทคอยน์
-- ฟันธงจังหวะและช่วงเวลาการลงทุนที่เหมาะสม เช่น "ควรรอย่อตัวแถวโซน Oversold ใน 4H", "โซนเขียว 1D สนับสนุนการสะสม" หรือ "อยู่ในภาวะ Overbought ให้ชะลอการซื้อ"
+[PART 2: สรุปสภาวะเทคนิคอลทองคำ (XAUUSD) และ บิทคอยน์ (BTCUSD)]
+- ให้สรุปการวิเคราะห์สภาวะเทคนิคอลของ XAUUSD และ BTCUSD ออกมาเป็นรูปแบบ Markdown Table เท่านั้น
+- ห้ามใส่ Bullet points ใน PART 2 เด็ดขาด
+- ใช้รูปแบบโครงสร้างตารางดังนี้เท่านั้น:
+| สินทรัพย์ | ราคาปัจจุบัน | CDC (1D) | Stochastic (1D) | CDC (4H) | Stochastic (4H) | คำแนะนำ / กลยุทธ์ | จุดเข้าซื้อที่ปลอดภัย |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **ทองคำ (XAUUSD)** | ... | ... | ... | ... | ... | ... | ... |
+| **บิทคอยน์ (BTCUSD)** | ... | ... | ... | ... | ... | ... | ... |
 
 [PART 3: บทวิเคราะห์ความสอดคล้อง (Macro-Technical Linkage)]
 - วิเคราะห์สภาวะตลาดปัจจุบันเทียบกับพอร์ต เช่น สัญญาณ TradingView และข่าวสาร Investing.com บ่งชี้ความเสี่ยงที่จะกระทบเงินต้นของพอร์ตนี้หรือไม่
@@ -312,7 +314,6 @@ def run_investment_ai_pipeline():
     print("\n🧠 กำลังส่งข้อมูลฟิวชันป้อนเข้า Gemini...")
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
-        # 🛠️ ใช้ Retry mechanism เมื่อเจอ Error 503
         response = generate_content_with_retry(
             client=client,
             model="gemini-3.6-flash",
@@ -326,7 +327,7 @@ def run_investment_ai_pipeline():
         print(report_text)
 
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
-        repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v7")
+        repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v8")
         header = (
             f"📦 Repository: {repo_name}\n"
             f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (พอร์ตจริง + CDC ActionZone Gold/BTC + ชนะเงินเฟ้อ)]\n"
