@@ -121,7 +121,6 @@ def fetch_all_tradingview_signals():
             neutral = analysis.summary.get('NEUTRAL', 0)
             tv_summary_report += f"- {asset['name']}: สัญญาณสรุป [{rec}] (แรงซื้อ: {buy}, แรงขาย: {sell}, ถือครอง: {neutral})\n"
             
-            # หน่วงเวลา 1.5 วินาทีระหว่างยิงคำขอแต่ละสินทรัพย์
             time.sleep(1.5)
         except Exception as e:
             tv_summary_report += f"- {asset['name']}: ดึงข้อมูลไม่สำเร็จ ({e})\n"
@@ -377,13 +376,18 @@ def run_investment_ai_pipeline():
     [YouTube Insights]
     {youtube_insights}
 
-    [คำสั่งพิเศษสำหรับการแสดงผลตาราง RMF]
-    ให้จัดทำตาราง Markdown สรุปสภาวะเทคนิคล่าสุดของกองทุน KTB RMF1 และ KTB RMF4 โดยแสดงคอลัมน์ดังนี้:
-    | สินทรัพย์ / กองทุน | ราคา NAV ล่าสุด | สัญญาณ MA (12/26) | Stochastic / RSI (14) | สัญญาณ MACD | สัดส่วนแนะนำ (%) | กลยุทธ์การปรับพอร์ต (Portfolio Strategy) |
+    [คำสั่งพิเศษสำหรับการแสดงผลตาราง Markdown]
+    ให้จัดทำตาราง Markdown สรุปสัญญาณเทคนิคและกลยุทธ์การลงทุนแยกออกเป็น 2 ตารางอย่างชัดเจน ดังนี้:
 
-    เงื่อนไขการใส่ข้อมูลในตาราง:
-    - KTB RMF1: แสดงค่า NAV, สัญญาณ WMA, ค่า RSI และ Stochastic (%K, %D) พร้อมใส่คำแนะนำปรับพอร์ตเป็น "{rmf1_analysis['action']}" ด้วยสัดส่วน {rmf1_analysis['weight']}
+    1. **ตารางสรุปภาวะกองทุน KTB RMF:**
+    | สินทรัพย์ / กองทุน | ราคา NAV ล่าสุด | สัญญาณ MA (12/26) | Stochastic / RSI (14) | สัญญาณ MACD | สัดส่วนแนะนำ (%) | กลยุทธ์การปรับพอร์ต (Portfolio Strategy) |
+    - KTB RMF1: แสดงค่า NAV, สัญญาณ WMA, ค่า RSI และ Stochastic (%K, %D) คำแนะนำเป็น "{rmf1_analysis['action']}" ด้วยสัดส่วน {rmf1_analysis['weight']}
     - KTB RMF4: แสดงค่า NAV และคำแนะนำเป็น "{rmf4_analysis['action']}" ด้วยสัดส่วน {rmf4_analysis['weight']}
+
+    2. **ตารางสรุปสัญญาณเทคนิคอลสินทรัพย์ทางเลือก (XAUUSD & BTCUSD):**
+    | สินทรัพย์ | Timeframe | ราคาล่าสุด | CDC ActionZone (EMA12/26) | Stochastic (14,3,3) | สัญญาณสรุป TV | สัดส่วนแนะนำ (%) | กลยุทธ์การลงทุน (Trading Strategy) |
+    - XAUUSD: ดึงข้อมูลสรุปทั้ง 1D และ 4H ลงในตาราง พร้อมใส่กลยุทธ์และสัดส่วนน้ำหนักแนะนำ
+    - BTCUSD: ดึงข้อมูลสรุปทั้ง 1D และ 4H ลงในตาราง พร้อมใส่กลยุทธ์และสัดส่วนน้ำหนักแนะนำ
     """
 
     client = genai.Client(api_key=GEMINI_API_KEY)
