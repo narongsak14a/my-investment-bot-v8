@@ -15,7 +15,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
-PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
+PORTFOLIO_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?output=csv"
 
 YOUTUBE_VIDEO_IDS = [""]
 
