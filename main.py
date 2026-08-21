@@ -255,7 +255,7 @@ def run_investment_ai_pipeline():
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
 
-macro_tech_prompt = f"""
+    macro_tech_prompt = f"""
 คุณคือ 'ประธานคณะกรรมการฝ่ายวิจัยและจัดการกองทุน (Chief Investment Officer - CIO)' หน้าที่ของคุณคือวิเคราะห์พอร์ตการลงทุนจริงของผู้ใช้ โดยประมวลผลร่วมกับ 'กระแสข่าวและบทวิเคราะห์จาก Investing.com', 'สัญญาณเทคนิคอลจาก TradingView' และ 'วิเคราะห์เจาะจง CDC ActionZone + Stochastic ของทองคำ และ บิทคอยน์'
 
 [เป้าหมายและเงื่อนไขการลงทุนของผู้ใช้]
@@ -315,6 +315,7 @@ macro_tech_prompt = f"""
 
 เขียนรายงานด้วยน้ำเสียงสถาบันการเงิน เฉียบคม ตรงไปตรงมา กระชับ และไม่มีคำเกริ่นนำที่ไม่จำเป็น
 """
+    
     print("\n🧠 กำลังส่งข้อมูลฟิวชันป้อนเข้า Gemini...")
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
