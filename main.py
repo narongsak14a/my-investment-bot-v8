@@ -226,9 +226,7 @@ if __name__ == "__main__":
     print(f"RSI(14): {result['rsi']:.2f} -> สภาวะ: {result['rsi_status']}")
 #----------------------------------------
 def fetch_rmf1_analysis_detail():
-    # เรียกใช้ฟังก์ชันคำนวณด้านบน
-    result = calculate_rmf1_technical_signals(df_nav_data)
-
+    result = calculate_rmf1_technical_signals(df_sample)  # เปลี่ยนเป็นชื่อตัวแปร DataFrame ที่ดึงไว้แล้ว
     rmf1_report = (
         "=== [การวิเคราะห์เทคนิคอล KTB RMF1 (WMA + MACD + RSI)] ===\n"
         f"  - ราคา NAV ล่าสุด: {result['close_nav']:.4f}\n"
