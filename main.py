@@ -17,7 +17,7 @@ CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
 PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 
-YOUTUBE_VIDEO_IDS = [""]
+YOUTUBE_VIDEO_IDS = ["FKR_58nL15A"]
 
 ASSETS = [
     {"name": "ทองคำไทย (Gold TH)", "symbol": "GOLD", "exchange": "TVC", "screener": "cfd"},
