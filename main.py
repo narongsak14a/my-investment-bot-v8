@@ -22,7 +22,7 @@ PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 YOUTUBE_VIDEO_IDS = [""]
 
 # URL สำหรับดึงรายการ ASSETS จาก Google Sheet (ตรวจสอบชื่อตัวแปรให้ตรงตามนี้)
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQ0kXAK-9S6ckGgHk3F7N1BGsaqDv4zwR/pub?gid=1067250335&single=true&output=csv"
+GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=1067250335&single=true&output=csv"
 
 
 # ==========================================
