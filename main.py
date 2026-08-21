@@ -225,16 +225,7 @@ if __name__ == "__main__":
     print(f"MACD: {result['macd']:.4f} | Signal: {result['macd_signal']:.4f} -> สัญญาณ: {result['macd_cross']}")
     print(f"RSI(14): {result['rsi']:.2f} -> สภาวะ: {result['rsi_status']}")
 #----------------------------------------
-def fetch_rmf1_analysis_detail():
-    result = calculate_rmf1_technical_signals(df_sample)  # เปลี่ยนเป็นชื่อตัวแปร DataFrame ที่ดึงไว้แล้ว
-    rmf1_report = (
-        "=== [การวิเคราะห์เทคนิคอล KTB RMF1 (WMA + MACD + RSI)] ===\n"
-        f"  - ราคา NAV ล่าสุด: {result['close_nav']:.4f}\n"
-        f"  - สัญญาณ WMA (12/26): {result['wma_status']} (WMA12: {result['wma12']:.2f}, WMA26: {result['wma26']:.2f})\n"
-        f"  - สัญญาณ MACD: {result['macd_cross']} (MACD: {result['macd']:.4f})\n"
-        f"  - RSI (14): {result['rsi']:.2f} [{result['rsi_status']}]\n"
-    )
-    return rmf1_report
+
     def fetch_rmf1_analysis_detail():
         # สมมติว่าดึงค่า WMA12, WMA26, RSI และ Stochastic มาแล้ว
         wma12 = result['wma12']
