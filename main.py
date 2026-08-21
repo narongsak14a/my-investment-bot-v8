@@ -20,7 +20,6 @@ PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 YOUTUBE_VIDEO_IDS = [""]
 
 ASSETS = [
-    {"name": "ทองคำโลก (Gold)", "symbol": "XAUUSD", "exchange": "OANDA", "screener": "cfd"},
     {"name": "ทองคำไทย (Gold TH)", "symbol": "GOLD", "exchange": "TVC", "screener": "cfd"},
     {"name": "Tesla (TSLA)", "symbol": "TSLA", "exchange": "NASDAQ", "screener": "america"},
     {"name": "Nvidia (NVDA)", "symbol": "NVDA", "exchange": "NASDAQ", "screener": "america"},
@@ -32,9 +31,24 @@ ASSETS = [
     {"name": "หุ้น KTB (KTB)", "symbol": "KTB", "exchange": "SET", "screener": "thailand"},
     {"name": "หุ้น SCB (SCB)", "symbol": "SCB", "exchange": "SET", "screener": "thailand"},
     {"name": "KTB RMF4 (อ้างอิงดัชนี SET)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
-    {"name": "KTB RMF1 Benchmark (Bond Yield 10Y)", "symbol": "US10Y", "exchange": "TVC", "screener": "bond"},
-    {"name": "Bitcoin (BTC/USD)", "symbol": "BTCUSD", "exchange": "BINANCE", "screener": "crypto"}
+    {"name": "KTB RMF1 Benchmark (Bond Yield 10Y)", "symbol": "US10Y", "exchange": "TVC", "screener": "bond"}
 ]
+
+# ==========================================
+# Helper Function: ป้องกัน HTTP 429 (Rate Limit)
+# ==========================================
+def get_analysis_safe(handler, retries=3, delay=3.0):
+    """เรียกใช้ get_analysis() พร้อมระบบชะลอเวลาและลองใหม่เมื่อติด Rate Limit (429)"""
+    for i in range(retries):
+        try:
+            return handler.get_analysis()
+        except Exception as e:
+            if "429" in str(e) and i < retries - 1:
+                print(f"⚠️ ติด Rate Limit (429) ชั่วคราว รอ {delay:.1f} วินาที แล้วลองใหม่ (พยายามครั้งที่ {i+1}/{retries})...")
+                time.sleep(delay)
+                delay *= 2  # เพิ่มเวลาหน่วงแบบ Exponential Backoff
+            else:
+                raise e
 
 # ==========================================
 # 2. ฟังก์ชันดึงข้อมูลดิบ (Data Acquisition)
@@ -100,12 +114,15 @@ def fetch_all_tradingview_signals():
                 screener=asset["screener"],
                 interval=Interval.INTERVAL_1_DAY
             )
-            analysis = handler.get_analysis()
+            analysis = get_analysis_safe(handler)
             rec = analysis.summary.get('RECOMMENDATION', 'N/A')
             buy = analysis.summary.get('BUY', 0)
             sell = analysis.summary.get('SELL', 0)
             neutral = analysis.summary.get('NEUTRAL', 0)
             tv_summary_report += f"- {asset['name']}: สัญญาณสรุป [{rec}] (แรงซื้อ: {buy}, แรงขาย: {sell}, ถือครอง: {neutral})\n"
+            
+            # หน่วงเวลา 1.5 วินาทีระหว่างยิงคำขอแต่ละสินทรัพย์
+            time.sleep(1.5)
         except Exception as e:
             tv_summary_report += f"- {asset['name']}: ดึงข้อมูลไม่สำเร็จ ({e})\n"
     return tv_summary_report
@@ -139,7 +156,7 @@ def fetch_gold_analysis_detail():
     for tf_name, tf_interval in timeframes.items():
         try:
             handler = TA_Handler(symbol="XAUUSD", exchange="OANDA", screener="cfd", interval=tf_interval)
-            analysis = handler.get_analysis()
+            analysis = get_analysis_safe(handler)
             close_price, ema12, ema26, cdc_status, stoch_k, stoch_d, stoch_status, summary_rec = calculate_cdc_and_stoch(analysis)
             gold_report += (
                 f"\n📌 Timeframe: {tf_name}\n"
@@ -148,18 +165,19 @@ def fetch_gold_analysis_detail():
                 f"  - CDC ActionZone (EMA12/EMA26): {cdc_status} (EMA12: {ema12:.2f}, EMA26: {ema26:.2f})\n"
                 f"  - Stochastic (14, 3, 3): %K = {stoch_k:.2f}, %D = {stoch_d:.2f} [{stoch_status}]\n"
             )
+            time.sleep(1.5)
         except Exception as e:
             gold_report += f"\n⚠️ ไม่สามารถดึงข้อมูล XAUUSD ({tf_name}) ได้: {e}\n"
     return gold_report
 
 def fetch_btc_analysis_detail():
-    print("⏳ กำลังดึงสัญญาณเทคนิคอลเจาะบิทคอยน์ (BTCUSD)...")
+    print("⏳ กำลังดึงสัญญาณเทคนิคอลเจาะลึกบิทคอยน์ (BTCUSD)...")
     timeframes = {"1D (ภาพรวมวัน)": Interval.INTERVAL_1_DAY, "4H (จังหวะระยะสั้น)": Interval.INTERVAL_4_HOURS}
     btc_report = "=== [การวิเคราะห์เจาะลึกบิทคอยน์ BTCUSD (CDC ActionZone + Stochastic 14, 3, 3)] ===\n"
     for tf_name, tf_interval in timeframes.items():
         try:
             handler = TA_Handler(symbol="BTCUSD", exchange="BINANCE", screener="crypto", interval=tf_interval)
-            analysis = handler.get_analysis()
+            analysis = get_analysis_safe(handler)
             close_price, ema12, ema26, cdc_status, stoch_k, stoch_d, stoch_status, summary_rec = calculate_cdc_and_stoch(analysis)
             btc_report += (
                 f"\n📌 Timeframe: {tf_name}\n"
@@ -168,6 +186,7 @@ def fetch_btc_analysis_detail():
                 f"  - CDC ActionZone (EMA12/EMA26): {cdc_status} (EMA12: {ema12:.2f}, EMA26: {ema26:.2f})\n"
                 f"  - Stochastic (14, 3, 3): %K = {stoch_k:.2f}, %D = {stoch_d:.2f} [{stoch_status}]\n"
             )
+            time.sleep(1.5)
         except Exception as e:
             btc_report += f"\n⚠️ ไม่สามารถดึงข้อมูล BTCUSD ({tf_name}) ได้: {e}\n"
     return btc_report
@@ -369,7 +388,7 @@ def run_investment_ai_pipeline():
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     response = client.models.generate_content(
-        model="gemini-3.6-flash",
+        model="gemini-2.5-flash",
         contents=macro_tech_prompt
     )
 
@@ -379,7 +398,5 @@ def run_investment_ai_pipeline():
 
     send_to_cloudflare(report_text)
 
-if __name__ == "__main__":
-    run_investment_ai_pipeline()
 if __name__ == "__main__":
     run_investment_ai_pipeline()
