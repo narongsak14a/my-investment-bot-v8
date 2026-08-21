@@ -17,7 +17,7 @@ CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
 PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 
-YOUTUBE_VIDEO_IDS = ["FKR_58nL15A"]
+YOUTUBE_VIDEO_IDS = [""]
 
 ASSETS = [
     {"name": "ทองคำไทย (Gold TH)", "symbol": "GOLD", "exchange": "TVC", "screener": "cfd"},
@@ -392,7 +392,7 @@ def run_investment_ai_pipeline():
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     response = client.models.generate_content(
-        model="gemini-3.6-flash",
+        model="gemini-3.5-flash",
         contents=macro_tech_prompt
     )
 
