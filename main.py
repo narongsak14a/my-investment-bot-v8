@@ -4,9 +4,9 @@ import requests
 # ==========================================
 # 1. ตั้งค่า URL สำหรับดึงข้อมูล CSV จาก Google Sheets
 # ==========================================
-ASSET_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=0&single=true&output=csv"
-INVESTMENT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=1298818179&single=true&output=csv"
-NEED_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=267763866&single=true&output=csv"
+ASSET_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_URL_FOR_ASSET/pub?gid=0&single=true&output=csv"
+INVESTMENT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_URL_FOR_INVESTMENT/pub?gid=YOUR_GID_INVESTMENT&single=true&output=csv"
+NEED_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_URL_FOR_NEED/pub?gid=YOUR_GID_NEED&single=true&output=csv"
 
 PORTFOLIO_URL = "https://example.com/fallback_portfolio.txt"
 
@@ -47,31 +47,28 @@ def fetch_portfolio_data():
             return "• ไม่พบข้อมูลพอร์ตการลงทุน"
 
 # ==========================================
-# 3. ฟังก์ชันดึงคำสั่งพิเศษจากชีท NEED (อ่านค่า detail)
+# 3. ฟังก์ชันดึงคำสั่งพิเศษจากชีท NEED (รองรับข้อความไร้ Header)
 # ==========================================
 def fetch_user_needs():
     print("⏳ กำลังดึงคำสั่งพิเศษจากชีท NEED...")
     try:
-        df_need = pd.read_csv(NEED_SHEET_CSV_URL)
-        df_need = df_need.dropna(how='all')  # ลบบรรทัดว่าง
+        # ใช้ header=None เพื่ออ่านข้อความตั้งแต่บรรทัดแรก โดยไม่ข้ามข้อความไปเป็นชื่อคอลัมน์
+        df_need = pd.read_csv(NEED_SHEET_CSV_URL, header=None)
         
-        if df_need.empty:
+        all_text_list = []
+        for row in df_need.itertuples(index=False):
+            for cell in row:
+                if pd.notna(cell) and str(cell).strip() != "":
+                    all_text_list.append(str(cell).strip())
+        
+        if not all_text_list:
             print("ℹ️ ไม่พบคำสั่งพิเศษในชีท NEED (ใช้วิเคราะห์ตามปกติ)")
             return "• ไม่มีคำสั่งพิเศษเพิ่มเติม ให้วิเคราะห์ตามมาตรฐาน"
             
-        needs_summary = []
-        for index, row in df_need.iterrows():
-            topic = row.get('topic', '-')
-            detail = row.get('detail', '-')
-            
-            if pd.notna(topic) or pd.notna(detail):
-                needs_summary.append(f"• หัวข้อคำสั่ง: {topic}\n  เป้าหมายการวิเคราะห์ (detail): {detail}")
-                
-        if not needs_summary:
-            return "• ไม่มีคำสั่งพิเศษเพิ่มเติม ให้วิเคราะห์ตามมาตรฐาน"
-
-        need_text = "=== [คำสั่งและเป้าหมายวิเคราะห์พิเศษจากผู้ใช้ (ชีท NEED)] ===\n" + "\n".join(needs_summary)
-        print("✅ ดึงข้อมูล topic และ detail จากชีท NEED สำเร็จ!")
+        need_text = "=== [คำสั่งและเป้าหมายวิเคราะห์พิเศษจากผู้ใช้ (ชีท NEED)] ===\n"
+        need_text += "\n".join([f"• {text}" for text in all_text_list])
+        
+        print("✅ ดึงข้อความจากชีท NEED สำเร็จ!")
         return need_text
         
     except Exception as e:
@@ -79,7 +76,7 @@ def fetch_user_needs():
         return "• ไม่สามารถดึงคำสั่งพิเศษจากชีท NEED ได้"
 
 # ==========================================
-# 4. ฟังก์ชันสร้าง Prompt คงโครงสร้างการรายงานเดิม
+# 4. ฟังก์ชันสร้าง Prompt คงโครงสร้างการรายงานเดิม + เน้นวิเคราะห์ comment & NEED
 # ==========================================
 def run_investment_ai_pipeline():
     portfolio_data = fetch_portfolio_data()
@@ -92,8 +89,11 @@ def run_investment_ai_pipeline():
 {user_needs_data}
 
 [แนวทางการนำข้อมูลพิเศษไปประมวลผล]:
-1. นำข้อความในช่อง 'detail' จากชีท NEED เป็นโจทย์หลักสูงสุดในการปรับเน้นเนื้อหาบทวิเคราะห์
-2. นำคอลัมน์ 'comment' จากชีท asset และ investment ไปประเมินเรื่องสภาพคล่อง (Liquidity), กระแสเงินสดรับ (Cash Flow) และเงื่อนไขการ Switching/Rebalancing ของพอร์ต
+1. นำข้อความคำสั่งจากชีท NEED มาเป็นโจทย์หลักสูงสุดในการกำหนดทิศทางบทวิเคราะห์และ Action Plan
+2. **นำคอลัมน์ comment ทั้งหมดมาวิเคราะห์เจาะลึก:**
+   - **ด้านสภาพคล่อง (Liquidity):** แยกแยะสินทรัพย์ที่ถอนไม่ได้ (เช่น หุ้นสหกรณ์) ออกจากสินทรัพย์ที่ถอนได้ (เช่น เงินฝากสุขเกษียณ) เพื่อวางแผนเงินสำรองฉุกเฉิน
+   - **ด้านกระแสเงินสด (Cash Flow):** นำรอบจ่ายดอกเบี้ย/ปันผล (เช่น ปีละครั้งใน ก.พ. VS ทุกเดือน) มาประเมิน Liquidity Management
+   - **ด้านข้อจำกัดการลงทุน:** นำเป้าหมายและเงื่อนไขของกองทุน RMF มาใช้กำหนดกลยุทธ์ Switching และ Rebalancing
 
 [ข้อมูลพอร์ตการลงทุนปัจจุบันของผู้ใช้]
 {portfolio_data}
@@ -107,15 +107,15 @@ def run_investment_ai_pipeline():
 - สรุปแนวโน้มตลาดหลัก ตลาดหุ้น ดอกเบี้ย และราคาสินค้าโภคภัณฑ์
 
 **2. สรุปการวิเคราะห์พอร์ตการลงทุนปัจจุบัน (Portfolio Analysis)**
-- วิเคราะห์สัดส่วนสินทรัพย์ โดยนำข้อมูล 'comment' (เช่น เงื่อนไขการถอนเงิน รอบดอกเบี้ย และข้อจำกัด RMF) มาประเมินสภาพคล่องและข้อจำกัดการลงทุนร่วมด้วย
-- ประเมินความสอดคล้องกับวัตถุประสงค์ในคอลัมน์ 'detail' (จากชีท NEED)
+- วิเคราะห์สัดส่วนสินทรัพย์ โดยนำข้อมูล 'comment' (เงื่อนไขการถอนเงิน รอบดอกเบี้ยรับ และข้อจำกัด RMF) มาวิเคราะห์เจาะลึกด้านสภาพคล่องและกระแสเงินสด
+- ประเมินความสอดคล้องกับวัตถุประสงค์ที่ระบุจากชีท NEED
 
 **3. ตารางสรุปสัญญาณทางเทคนิคและคำแนะนำ (Technical Summary Table)**
 สร้างตาราง Markdown สรุปรายการสินทรัพย์/กองทุน โดยมีคอลัมน์ดังนี้:
 | สินทรัพย์/กองทุน | แนวโน้ม (Trend) | สัญญาณเทคนิค | หมายเหตุ/เงื่อนไข (Comment) | คำแนะนำ (Action) |
 
 **4. แผนการดำเนินการและคำแนะนำการปรับพอร์ต (Action Plan)**
-- ให้คำแนะนำเชิงรุก เช่น การ Rebalancing, การ Switching กองทุน หรือการบริหารสภาพคล่อง ที่ตอบโจทย์ 'detail' ในชีท NEED อย่างเป็นรูปธรรม
+- ให้คำแนะนำเชิงรุก เช่น การ Rebalancing, การ Switching กองทุน หรือการวางแผนเงินสำรองสภาพคล่อง ที่ตอบโจทย์ความต้องการในชีท NEED และสอดคล้องกับ comment ในพอร์ตอย่างเป็นรูปธรรม
 """
     
     print("🚀 พร้อมส่ง Prompt วิเคราะห์ตามโครงสร้างเดิมเรียบร้อย!")
