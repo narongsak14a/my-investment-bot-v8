@@ -5,8 +5,8 @@ import requests
 # 1. ตั้งค่า URL สำหรับดึงข้อมูล CSV จาก Google Sheets
 # ==========================================
 ASSET_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=0&single=true&output=csv"
-INVESTMENT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_URL_FOR_INVESTMENT/pub?gid=YOUR_GID_INVESTMENT&single=true&output=csv"
-NEED_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_URL_FOR_NEED/pub?gid=YOUR_GID_NEED&single=true&output=csv"
+INVESTMENT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=1298818179&single=true&output=csv"
+NEED_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=267763866&single=true&output=csv"
 
 PORTFOLIO_URL = "https://example.com/fallback_portfolio.txt"
 
