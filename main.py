@@ -16,29 +16,28 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
 
-# URL สำหรับดึงข้อมูลพอร์ตการลงทุน
+# URL สำหรับดึงข้อมูลพอร์ตสำรอง (Fallback)
 PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 
 YOUTUBE_VIDEO_IDS = [""]
 
-# URL สำหรับดึงรายการ ASSETS จาก Google Sheet (ตรวจสอบชื่อตัวแปรให้ตรงตามนี้)
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=1067250335&single=true&output=csv"
-
+# URL จาก Google Sheet (ใส่ GID ของแต่ละชีทให้ถูกต้อง)
+INTEREST_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=1067250335&single=true&output=csv"
+ASSET_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=0&single=true&output=csv"
+INVESTMENT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQOkXAK-9S6ckGgHk3F7NlBGsaqDv4zwR/pub?gid=1298818179&single=true&output=csv"
 
 # ==========================================
-# ฟังก์ชันดึง ASSETS จาก Google Sheet
+# ฟังก์ชันดึง ASSETS สำหรับวิเคราะห์สัญญาณ (จากชีท interest)
 # ==========================================
 def fetch_assets_from_google_sheet():
-    print("⏳ กำลังดึงรายการ ASSETS จาก Google Sheet...")
+    print("⏳ กำลังดึงรายการ ASSETS จากชีท interest...")
     try:
-        df = pd.read_csv(GOOGLE_SHEET_CSV_URL)
-        # แปลงข้อมูลใน Sheet ให้เป็น List of Dicts
+        df = pd.read_csv(INTEREST_SHEET_CSV_URL)
         assets_list = df.to_dict(orient='records')
         print(f"✅ ดึงรายการสินทรัพย์สำเร็จ ทั้งหมด {len(assets_list)} รายการ")
         return assets_list
     except Exception as e:
-        print(f"⚠️ ไม่สามารถดึงข้อมูลจาก Google Sheet ได้ ({e}) นำเข้าค่าสำรองแทน")
-        # รายการสำรอง (Fallback) หากดึง Sheet ไม่สำเร็จ
+        print(f"⚠️ ไม่สามารถดึงข้อมูลจากชีท interest ได้ ({e}) นำเข้าค่าสำรองแทน")
         return [
             {"name": "ทองคำไทย (Gold TH)", "symbol": "GOLD", "exchange": "TVC", "screener": "cfd"},
             {"name": "Tesla (TSLA)", "symbol": "TSLA", "exchange": "NASDAQ", "screener": "america"},
@@ -53,6 +52,7 @@ def fetch_assets_from_google_sheet():
             {"name": "KTB RMF4 (อ้างอิงดัชนี SET)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
             {"name": "KTB RMF1 Benchmark (Bond Yield 10Y)", "symbol": "US10Y", "exchange": "TVC", "screener": "bond"}
         ]
+
 # เรียกใช้งานฟังก์ชันดึง ASSETS
 ASSETS = fetch_assets_from_google_sheet()
 
@@ -68,7 +68,7 @@ def get_analysis_safe(handler, retries=3, delay=3.0):
             if "429" in str(e) and i < retries - 1:
                 print(f"⚠️ ติด Rate Limit (429) ชั่วคราว รอ {delay:.1f} วินาที แล้วลองใหม่ (พยายามครั้งที่ {i+1}/{retries})...")
                 time.sleep(delay)
-                delay *= 2  # เพิ่มเวลาหน่วงแบบ Exponential Backoff
+                delay *= 2
             else:
                 raise e
 
@@ -76,18 +76,33 @@ def get_analysis_safe(handler, retries=3, delay=3.0):
 # 2. ฟังก์ชันดึงข้อมูลดิบ (Data Acquisition)
 # ==========================================
 def fetch_portfolio_data():
-    print("⏳ กำลังเชื่อมต่อดึงข้อมูลพอร์ตการลงทุนจริง...")
+    print("⏳ กำลังดึงข้อมูลพอร์ตจาก Google Sheet (asset & investment)...")
     try:
-        response = requests.get(PORTFOLIO_URL, timeout=10)
-        if response.status_code == 200:
-            print("✅ ดึงข้อมูลพอร์ตการลงทุนสำเร็จ!")
-            return response.text[:2500]
-        else:
-            print(f"⚠️ ไม่สามารถดึงข้อมูลพอร์ตได้ (HTTP {response.status_code})")
-            return "• ไม่สามารถดึงข้อมูลพอร์ตได้ในขณะนี้"
+        df_asset = pd.read_csv(ASSET_SHEET_CSV_URL)
+        df_investment = pd.read_csv(INVESTMENT_SHEET_CSV_URL)
+        
+        portfolio_text = "=== [ข้อมูลพอร์ตการลงทุนจาก Google Sheet] ===\n\n"
+        portfolio_text += "📌 รายการสินทรัพย์อื่นๆ (ชีท asset):\n"
+        portfolio_text += df_asset.to_string(index=False) + "\n\n"
+        portfolio_text += "📌 รายการกองทุน/เงินลงทุน (ชีท investment):\n"
+        portfolio_text += df_investment.to_string(index=False)
+        
+        print("✅ ดึงข้อมูลพอร์ตจาก Google Sheet สำเร็จ!")
+        return portfolio_text
+
     except Exception as e:
-        print(f"⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพอร์ต: {e}")
-        return "• ไม่พบข้อมูลพอร์ตการลงทุน"
+        print(f"⚠️ ไม่สามารถดึงข้อมูลจาก Google Sheet ได้ ({e}) สลับไปใช้ข้อมูลสำรองจาก PORTFOLIO_URL")
+        try:
+            response = requests.get(PORTFOLIO_URL, timeout=10)
+            if response.status_code == 200:
+                print("✅ ดึงข้อมูลพอร์ตสำรองสำเร็จ!")
+                return response.text[:2500]
+            else:
+                print(f"⚠️ ไม่สามารถดึงข้อมูลพอร์ตได้ (HTTP {response.status_code})")
+                return "• ไม่สามารถดึงข้อมูลพอร์ตได้ในขณะนี้"
+        except Exception as fallback_err:
+            print(f"⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพอร์ตสำรอง: {fallback_err}")
+            return "• ไม่พบข้อมูลพอร์ตการลงทุน"
 
 def fetch_rss_news():
     print("⏳ กำลังเชื่อมต่อดึงข้อมูลข่าวสารและบทวิเคราะห์...")
@@ -141,11 +156,12 @@ def fetch_all_tradingview_signals():
             buy = analysis.summary.get('BUY', 0)
             sell = analysis.summary.get('SELL', 0)
             neutral = analysis.summary.get('NEUTRAL', 0)
-            tv_summary_report += f"- {asset['name']}: สัญญาณสรุป [{rec}] (แรงซื้อ: {buy}, แรงขาย: {sell}, ถือครอง: {neutral})\n"
             
+            tv_summary_report += f"- {asset['name']}: สัญญาณสรุป [{rec}] (แรงซื้อ: {buy}, แรงขาย: {sell}, ถือครอง: {neutral})\n"
             time.sleep(1.5)
         except Exception as e:
             tv_summary_report += f"- {asset['name']}: ดึงข้อมูลไม่สำเร็จ ({e})\n"
+            
     return tv_summary_report
 
 def calculate_cdc_and_stoch(handler_analysis):
@@ -154,12 +170,12 @@ def calculate_cdc_and_stoch(handler_analysis):
     ema12 = indicators.get("EMA12", indicators.get("EMA10", 0))
     ema26 = indicators.get("EMA26", indicators.get("EMA20", 0))
     summary_rec = handler_analysis.summary.get('RECOMMENDATION', 'N/A')
-
+    
     if ema12 > 0 and ema26 > 0:
         cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)" if ema12 > ema26 else "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
     else:
         cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)" if "BUY" in summary_rec else "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
-
+        
     stoch_k = indicators.get("Stoch.K", 0)
     stoch_d = indicators.get("Stoch.D", 0)
     stoch_status = "Neutral"
@@ -167,7 +183,7 @@ def calculate_cdc_and_stoch(handler_analysis):
         stoch_status = "🔵 Oversold (ขายมากเกินไป - ลุ้นดีดกลับ/จังหวะตั้งรับ)"
     elif stoch_k > 80:
         stoch_status = "🟠 Overbought (ซื้อมากเกินไป - ระวังการย่อตัว)"
-
+        
     return close_price, ema12, ema26, cdc_status, stoch_k, stoch_d, stoch_status, summary_rec
 
 def fetch_gold_analysis_detail():
@@ -216,15 +232,14 @@ def fetch_btc_analysis_detail():
 # 3. ส่วนคำนวณเทคนิครวม KTB RMF1 & RMF4
 # ==========================================
 def calculate_rmf1_technical_signals(df_nav):
-    """คำนวณ WMA, MACD, RSI และ Stochastic สำหรับ KTB RMF1"""
     if df_nav is None or len(df_nav) < 26:
         print("⚠️ ข้อมูลราคา RMF1 ไม่เพียงพอสำหรับประมวลผล")
         return None
-
+    
     df = df_nav.copy()
     df["WMA12"] = ta.wma(df["close"], length=12)
     df["WMA26"] = ta.wma(df["close"], length=26)
-
+    
     macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
     if macd is not None and not macd.empty:
         df["MACD"] = macd["MACD_12_26_9"]
@@ -232,14 +247,14 @@ def calculate_rmf1_technical_signals(df_nav):
     else:
         df["MACD"] = 0.0
         df["MACD_Signal"] = 0.0
-
+        
     df["RSI14"] = ta.rsi(df["close"], length=14)
-
+    
     if "high" not in df.columns:
         df["high"] = df["close"]
     if "low" not in df.columns:
         df["low"] = df["close"]
-
+        
     stoch = ta.stoch(df["high"], df["low"], df["close"], k=14, d=3, smooth_k=3)
     if stoch is not None and not stoch.empty:
         df["STOCHk"] = stoch["STOCHk_14_3_3"]
@@ -247,10 +262,10 @@ def calculate_rmf1_technical_signals(df_nav):
     else:
         df["STOCHk"] = 0.0
         df["STOCHd"] = 0.0
-
+        
     latest = df.iloc[-1]
     wma_status = "🟢 BULLISH (Golden Cross)" if latest["WMA12"] > latest["WMA26"] else "🔴 BEARISH (Death Cross)"
-
+    
     return {
         "close_nav": latest["close"],
         "wma12": latest["WMA12"],
@@ -264,7 +279,6 @@ def calculate_rmf1_technical_signals(df_nav):
     }
 
 def fetch_rmf1_analysis_detail():
-    """ประมวลผลบทวิเคราะห์และ Logic การสลับพอร์ต KTB RMF1"""
     dummy_data = {
         "close": [62.10, 62.15, 62.20, 62.30, 62.25, 62.40, 62.55, 62.60, 62.80, 63.00,
                   63.10, 63.25, 63.50, 63.80, 64.10, 64.50, 65.00, 65.20, 65.80, 66.10,
@@ -272,19 +286,20 @@ def fetch_rmf1_analysis_detail():
     }
     df_sample = pd.DataFrame(dummy_data)
     result = calculate_rmf1_technical_signals(df_sample)
-
+    
     if not result:
         return {
             "action": "🟡 [HOLD] ไม่พบข้อมูล",
             "weight": "0%",
             "report_text": "⚠️ ไม่พบข้อมูลสำหรับประมวลผล RMF1"
         }
-
+        
     wma12 = result['wma12']
     wma26 = result['wma26']
     rsi = result['rsi']
+    
     wma_gap_pct = ((wma12 - wma26) / wma26) * 100
-
+    
     if wma12 < wma26:
         action_recommendation = "🔴 [REDUCE PORTFOLIO] ลดพอร์ต RMF1 ทันที และ Switching ไปยัง KTB RMF4 เพื่อปกป้องเงินต้น (เกิด Death Cross)"
         suggested_weight = "0% - 10%"
@@ -300,7 +315,7 @@ def fetch_rmf1_analysis_detail():
     else:
         action_recommendation = "🟡 [HOLD] รอดูทิศทางสัญญาณ"
         suggested_weight = "20%"
-
+        
     rmf1_report = (
         "=== [การวิเคราะห์เทคนิคอล KTB RMF1 (WMA + MACD + RSI + Stoch)] ===\n"
         f"  - ราคา NAV ล่าสุด: {result['close_nav']:.4f}\n"
@@ -309,7 +324,7 @@ def fetch_rmf1_analysis_detail():
         f"  - RSI (14): {rsi:.2f} | Stoch %K: {result['stoch_k']:.2f}, %D: {result['stoch_d']:.2f}\n"
         f"  - คำแนะนำปรับพอร์ต: {action_recommendation} (สัดส่วนแนะนำ: {suggested_weight})\n"
     )
-
+    
     return {
         "action": action_recommendation,
         "weight": suggested_weight,
@@ -318,7 +333,6 @@ def fetch_rmf1_analysis_detail():
     }
 
 def fetch_rmf4_analysis_detail():
-    """ประมวลผลข้อมูล KTB RMF4 (Safe Zone/ตลาดเงิน)"""
     rmf4_nav = 10.1254
     rmf4_report = (
         "=== [การวิเคราะห์ KTB RMF4 (กองทุนตลาดเงิน / พักเงิน)] ===\n"
@@ -338,14 +352,17 @@ def send_to_cloudflare(message_text):
     if not CLOUDFLARE_WORKER_URL:
         print("❌ ไม่พบ CLOUDFLARE_WORKER_URL ใน Secrets")
         return
+        
     headers = {"Content-Type": "application/json"}
     if CLOUDFLARE_AUTH_TOKEN:
         headers["Authorization"] = f"Bearer {CLOUDFLARE_AUTH_TOKEN.strip()}"
+        
     payload = {
         "email": "narongsak14@gmail.com",
         "report_type": "CIO_DAILY_REPORT",
         "content": message_text
     }
+    
     try:
         response = requests.post(CLOUDFLARE_WORKER_URL, json=payload, headers=headers)
         if response.status_code in [200, 201]:
@@ -360,68 +377,67 @@ def send_to_cloudflare(message_text):
 # ==========================================
 def run_investment_ai_pipeline():
     print("\n--- 🚀 เริ่มต้นกระบวนการวิเคราะห์การลงทุนระดับมืออาชีพ ---")
-
+    
     portfolio_data = fetch_portfolio_data()
     gold_detailed_signals = fetch_gold_analysis_detail()
     btc_detailed_signals = fetch_btc_analysis_detail()
     raw_news_data = fetch_rss_news()
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
-
     rmf1_analysis = fetch_rmf1_analysis_detail()
     rmf4_analysis = fetch_rmf4_analysis_detail()
-
+    
     macro_tech_prompt = f"""
-    คุณเป็นที่ปรึกษาการลงทุนระดับมืออาชีพ ให้สรุปสภาวะตลาดและจัดทำรายงานวิเคราะห์ประจำวัน
+คุณเป็นที่ปรึกษาการลงทุนระดับมืออาชีพ ให้สรุปสภาวะตลาดและจัดทำรายงานวิเคราะห์ประจำวัน
 
-    [ข้อมูลพอร์ตการลงทุนปัจจุบันของผู้ใช้]
-    {portfolio_data}
+[ข้อมูลพอร์ตการลงทุนปัจจุบันของผู้ใช้]
+{portfolio_data}
 
-    [ข้อมูลวิเคราะห์ KTB RMF1]
-    {rmf1_analysis['report_text']}
+[ข้อมูลวิเคราะห์ KTB RMF1]
+{rmf1_analysis['report_text']}
 
-    [ข้อมูลวิเคราะห์ KTB RMF4]
-    {rmf4_analysis['report_text']}
+[ข้อมูลวิเคราะห์ KTB RMF4]
+{rmf4_analysis['report_text']}
 
-    [ข้อมูลทองคำ XAUUSD]
-    {gold_detailed_signals}
+[ข้อมูลทองคำ XAUUSD]
+{gold_detailed_signals}
 
-    [ข้อมูลบิทคอยน์ BTCUSD]
-    {btc_detailed_signals}
+[ข้อมูลบิทคอยน์ BTCUSD]
+{btc_detailed_signals}
 
-    [ข้อมูลสัญญาณจาก TradingView]
-    {tradingview_signals}
+[ข้อมูลสัญญาณจาก TradingView]
+{tradingview_signals}
 
-    [ข่าวสารล่าสุด]
-    {raw_news_data}
+[ข่าวสารล่าสุด]
+{raw_news_data}
 
-    [YouTube Insights]
-    {youtube_insights}
+[YouTube Insights]
+{youtube_insights}
 
-    [คำสั่งพิเศษสำหรับการแสดงผลตาราง Markdown]
-    ให้จัดทำตาราง Markdown สรุปสัญญาณเทคนิคและกลยุทธ์การลงทุนแยกออกเป็น 2 ตารางอย่างชัดเจน ดังนี้:
+[คำสั่งพิเศษสำหรับการแสดงผลตาราง Markdown]
+ให้จัดทำตาราง Markdown สรุปสัญญาณเทคนิคและกลยุทธ์การลงทุนแยกออกเป็น 2 ตารางอย่างชัดเจน ดังนี้:
 
-    1. **ตารางสรุปภาวะกองทุน KTB RMF:**
-    | สินทรัพย์ / กองทุน | ราคา NAV ล่าสุด | สัญญาณ MA (12/26) | Stochastic / RSI (14) | สัญญาณ MACD | สัดส่วนแนะนำ (%) | กลยุทธ์การปรับพอร์ต (Portfolio Strategy) |
-    - KTB RMF1: แสดงค่า NAV, สัญญาณ WMA, ค่า RSI และ Stochastic (%K, %D) คำแนะนำเป็น "{rmf1_analysis['action']}" ด้วยสัดส่วน {rmf1_analysis['weight']}
-    - KTB RMF4: แสดงค่า NAV และคำแนะนำเป็น "{rmf4_analysis['action']}" ด้วยสัดส่วน {rmf4_analysis['weight']}
+1. **ตารางสรุปภาวะกองทุน KTB RMF:**
+| สินทรัพย์ / กองทุน | ราคา NAV ล่าสุด | สัญญาณ MA (12/26) | Stochastic / RSI (14) | สัญญาณ MACD | สัดส่วนแนะนำ (%) | กลยุทธ์การปรับพอร์ต (Portfolio Strategy) |
+- KTB RMF1: แสดงค่า NAV, สัญญาณ WMA, ค่า RSI และ Stochastic (%K, %D) คำแนะนำเป็น "{rmf1_analysis['action']}" ด้วยสัดส่วน {rmf1_analysis['weight']}
+- KTB RMF4: แสดงค่า NAV และคำแนะนำเป็น "{rmf4_analysis['action']}" ด้วยสัดส่วน {rmf4_analysis['weight']}
 
-    2. **ตารางสรุปสัญญาณเทคนิคอลสินทรัพย์ทางเลือก (XAUUSD & BTCUSD):**
-    | สินทรัพย์ | Timeframe | ราคาล่าสุด | CDC ActionZone (EMA12/26) | Stochastic (14,3,3) | สัญญาณสรุป TV | สัดส่วนแนะนำ (%) | กลยุทธ์การลงทุน (Trading Strategy) |
-    - XAUUSD: ดึงข้อมูลสรุปทั้ง 1D และ 4H ลงในตาราง พร้อมใส่กลยุทธ์และสัดส่วนน้ำหนักแนะนำ
-    - BTCUSD: ดึงข้อมูลสรุปทั้ง 1D และ 4H ลงในตาราง พร้อมใส่กลยุทธ์และสัดส่วนน้ำหนักแนะนำ
-    """
+2. **ตารางสรุปสัญญาณเทคนิคอลสินทรัพย์ทางเลือก (XAUUSD & BTCUSD):**
+| สินทรัพย์ | Timeframe | ราคาล่าสุด | CDC ActionZone (EMA12/26) | Stochastic (14,3,3) | สัญญาณสรุป TV | สัดส่วนแนะนำ (%) | กลยุทธ์การลงทุน (Trading Strategy) |
+- XAUUSD: ดึงข้อมูลสรุปทั้ง 1D และ 4H ลงในตาราง พร้อมใส่กลยุทธ์และสัดส่วนน้ำหนักแนะนำ
+- BTCUSD: ดึงข้อมูลสรุปทั้ง 1D และ 4H ลงในตาราง พร้อมใส่กลยุทธ์และสัดส่วนน้ำหนักแนะนำ
+"""
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     response = client.models.generate_content(
         model="gemini-3.5-flash",
         contents=macro_tech_prompt
     )
-
+    
     report_text = response.text
     print("\n=== [ผลลัพธ์รายงาน AI] ===")
     print(report_text[:1000])
-
+    
     send_to_cloudflare(report_text)
 
 if __name__ == "__main__":
