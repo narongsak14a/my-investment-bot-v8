@@ -127,10 +127,22 @@ def calculate_rmf1_technical_signals(df_nav):
 
     # 2. คำนวณ MACD Cross (12, 26, 9)
     macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
+
+    # เพิ่มการเช็กค่านิพจน์เพื่อป้องกัน TypeError
+    if macd is not None and not macd.empty:
+      df["MACD"] = macd["MACD_12_26_9"]
+      df["MACD_Signal"] = macd["MACDs_12_26_9"]
+      df["MACD_Hist"] = macd["MACDh_12_26_9"]
+   else:
+    df["MACD"] = 0.0
+    df["MACD_Signal"] = 0.0
+    df["MACD_Hist"] = 0.0# 2. คำนวณ MACD Cross (12, 26, 9)
+    macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
     df["MACD"] = macd["MACD_12_26_9"]
     df["MACD_Signal"] = macd["MACDs_12_26_9"]
     df["MACD_Hist"] = macd["MACDh_12_26_9"]
-
+#-------------------------------------------------
+    
     # 3. คำนวณ RSI Cross (14)
     df["RSI14"] = ta.rsi(df["close"], length=14)
 
