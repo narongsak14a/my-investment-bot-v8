@@ -19,20 +19,39 @@ PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 
 YOUTUBE_VIDEO_IDS = [""]
 
-ASSETS = [
-    {"name": "ทองคำไทย (Gold TH)", "symbol": "GOLD", "exchange": "TVC", "screener": "cfd"},
-    {"name": "Tesla (TSLA)", "symbol": "TSLA", "exchange": "NASDAQ", "screener": "america"},
-    {"name": "Nvidia (NVDA)", "symbol": "NVDA", "exchange": "NASDAQ", "screener": "america"},
-    {"name": "ดัชนีหุ้นไทย (SET Index)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
-    {"name": "หุ้น DEMCO (DEMCO)", "symbol": "DEMCO", "exchange": "SET", "screener": "thailand"},
-    {"name": "หุ้น ASP (ASP)", "symbol": "ASP", "exchange": "SET", "screener": "thailand"},
-    {"name": "หุ้น KGI (KGI)", "symbol": "KGI", "exchange": "SET", "screener": "thailand"},
-    {"name": "หุ้น TISCO (TISCO)", "symbol": "TISCO", "exchange": "SET", "screener": "thailand"},
-    {"name": "หุ้น KTB (KTB)", "symbol": "KTB", "exchange": "SET", "screener": "thailand"},
-    {"name": "หุ้น SCB (SCB)", "symbol": "SCB", "exchange": "SET", "screener": "thailand"},
-    {"name": "KTB RMF4 (อ้างอิงดัชนี SET)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
-    {"name": "KTB RMF1 Benchmark (Bond Yield 10Y)", "symbol": "US10Y", "exchange": "TVC", "screener": "bond"}
-]
+# ใส่ URL ที่ได้จากการ Publish Google Sheet เป็น CSV ตรงนี้
+GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-xxxxxxx/pub?output=csv"
+
+# ==========================================
+# ฟังก์ชันดึง ASSETS จาก Google Sheet
+# ==========================================
+def fetch_assets_from_google_sheet():
+    print("⏳ กำลังดึงรายการ ASSETS จาก Google Sheet...")
+    try:
+        df = pd.read_csv(GOOGLE_SHEET_CSV_URL)
+        # แปลงข้อมูลใน Sheet ให้เป็น List of Dicts
+        assets_list = df.to_dict(orient='records')
+        print(f"✅ ดึงรายการสินทรัพย์สำเร็จ ทั้งหมด {len(assets_list)} รายการ")
+        return assets_list
+    except Exception as e:
+        print(f"⚠️ ไม่สามารถดึงข้อมูลจาก Google Sheet ได้ ({e}) นำเข้าค่าสำรองแทน")
+        # รายการสำรอง (Fallback) หากดึง Sheet ไม่สำเร็จ
+        return [
+            {"name": "ทองคำไทย (Gold TH)", "symbol": "GOLD", "exchange": "TVC", "screener": "cfd"},
+            {"name": "Tesla (TSLA)", "symbol": "TSLA", "exchange": "NASDAQ", "screener": "america"},
+            {"name": "Nvidia (NVDA)", "symbol": "NVDA", "exchange": "NASDAQ", "screener": "america"},
+            {"name": "ดัชนีหุ้นไทย (SET Index)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
+            {"name": "หุ้น DEMCO (DEMCO)", "symbol": "DEMCO", "exchange": "SET", "screener": "thailand"},
+            {"name": "หุ้น ASP (ASP)", "symbol": "ASP", "exchange": "SET", "screener": "thailand"},
+            {"name": "หุ้น KGI (KGI)", "symbol": "KGI", "exchange": "SET", "screener": "thailand"},
+            {"name": "หุ้น TISCO (TISCO)", "symbol": "TISCO", "exchange": "SET", "screener": "thailand"},
+            {"name": "หุ้น KTB (KTB)", "symbol": "KTB", "exchange": "SET", "screener": "thailand"},
+            {"name": "หุ้น SCB (SCB)", "symbol": "SCB", "exchange": "SET", "screener": "thailand"},
+            {"name": "KTB RMF4 (อ้างอิงดัชนี SET)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
+            {"name": "KTB RMF1 Benchmark (Bond Yield 10Y)", "symbol": "US10Y", "exchange": "TVC", "screener": "bond"}
+        ]
+# เรียกใช้งานฟังก์ชันดึง ASSETS
+ASSETS = fetch_assets_from_google_sheet()
 
 # ==========================================
 # Helper Function: ป้องกัน HTTP 429 (Rate Limit)
