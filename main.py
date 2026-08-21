@@ -540,11 +540,9 @@ def run_investment_ai_pipeline():
 {rmf1_signals}
 ----------------------------------------
 [เงื่อนไขและกฎคำแนะนำปรับพอร์ต KTB RMF1]
-    # ✅ ดึงค่าจาก Dictionary หรือสตริง rmf1_signals ที่ประกาศไว้
+    # ✅ เปลี่ยนเป็น rmf1_signals ให้ตรงกัน
     - สถานะการวิเคราะห์ปัจจุบัน: {rmf1_signals['action']}
-    # (หรือหาก rmf1_signals เป็นสตริง ให้ใช้ {rmf1_signals})
-    - สัดส่วนเป้าหมายแนะนำ: {rmf1_analysis['weight']}
-
+    - สัดส่วนเป้าหมายแนะนำ: {rmf1_signals['weight']}
     [คำสั่งสำหรับสรุปตาราง KTB RMF1]
     ให้แสดงรายละเอียดตารางวิเคราะห์ KTB RMF1 ดังนี้:
     1. หาก WMA12 ใกล้ตัด WMA26 ลงมา ร่วมกับ RSI/Stochastic Overbought:
