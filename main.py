@@ -475,6 +475,8 @@ def run_investment_ai_pipeline():
     portfolio_data = fetch_portfolio_data()
     gold_detailed_signals = fetch_gold_analysis_detail()
     btc_detailed_signals = fetch_btc_analysis_detail()
+    # 📌 ดึงข้อมูลบทวิเคราะห์ RMF1 เข้ามาตรงนี้
+    rmf1_signals = fetch_rmf1_analysis_detail()
     raw_news_data = fetch_rss_news()
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
@@ -496,12 +498,14 @@ def run_investment_ai_pipeline():
 ----------------------------------------
 {portfolio_data}
 ----------------------------------------
-
+[ชุดข้อมูลวิเคราะห์พิเศษ: กองทุนรวม KTB RMF1]
+----------------------------------------
+{rmf1_signals}
+----------------------------------------
 [ชุดข้อมูลวิเคราะห์พิเศษ: ทองคำโลก XAUUSD (1D & 4H)]
 ----------------------------------------
 {gold_detailed_signals}
 ----------------------------------------
-
 [ชุดข้อมูลวิเคราะห์พิเศษ: บิทคอยน์ BTCUSD (1D & 4H)]
 ----------------------------------------
 {btc_detailed_signals}
