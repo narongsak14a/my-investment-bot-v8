@@ -540,7 +540,9 @@ def run_investment_ai_pipeline():
 {rmf1_signals}
 ----------------------------------------
 [เงื่อนไขและกฎคำแนะนำปรับพอร์ต KTB RMF1]
-    - สถานะการวิเคราะห์ปัจจุบัน: {rmf1_analysis['action']}
+    # ✅ ดึงค่าจาก Dictionary หรือสตริง rmf1_signals ที่ประกาศไว้
+    - สถานะการวิเคราะห์ปัจจุบัน: {rmf1_signals['action']}
+    # (หรือหาก rmf1_signals เป็นสตริง ให้ใช้ {rmf1_signals})
     - สัดส่วนเป้าหมายแนะนำ: {rmf1_analysis['weight']}
 
     [คำสั่งสำหรับสรุปตาราง KTB RMF1]
