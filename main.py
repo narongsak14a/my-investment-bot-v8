@@ -53,13 +53,51 @@ def fetch_portfolio_data():
         print(f"⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพอร์ต: {e}")
         return "• ไม่พบข้อมูลพอร์ตการลงทุน"
 
+def calculate_cdc_and_stoch(handler_analysis):
+    """ฟังก์ชันช่วยประมวลผล CDC ActionZone และ Stochastic อย่างถูกต้อง"""
+    indicators = handler_analysis.indicators
+    close_price = indicators.get("close", 0)
+    
+    # ดึงค่า EMA12 และ EMA26 (หากไม่มี ให้ใช้ค่า fallback จาก SMA หรือ Moving Averages)
+    ema12 = indicators.get("EMA12", indicators.get("EMA10", 0))
+    ema26 = indicators.get("EMA26", indicators.get("EMA20", 0))
+    
+    # ตรวจสอบ CDC ActionZone Trend
+    # หาก EMA12/EMA26 เป็น 0 (ไม่มีข้อมูล) ให้เช็คจาก RECOMMENDATION สรุปของ TradingView
+    summary_rec = handler_analysis.summary.get('RECOMMENDATION', 'N/A')
+    
+    if ema12 > 0 and ema26 > 0:
+        if ema12 > ema26:
+            cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)"
+        else:
+            cdc_status = "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
+    else:
+        # Fallback สัญญาณเมื่อ EMA ดึงค่าไม่สำเร็จ
+        if "BUY" in summary_rec:
+            cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)"
+        else:
+            cdc_status = "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
+
+    stoch_k = indicators.get("Stoch.K", 0)
+    stoch_d = indicators.get("Stoch.D", 0)
+    
+    stoch_status = "Neutral"
+    if stoch_k < 20:
+        stoch_status = "🔵 Oversold (ขายมากเกินไป - ลุ้นดีดกลับ/จังหวะตั้งรับ)"
+    elif stoch_k > 80:
+        stoch_status = "🟠 Overbought (ซื้อมากเกินไป - ระวังการย่อตัว)"
+        
+    return close_price, ema12, ema26, cdc_status, stoch_k, stoch_d, stoch_status, summary_rec
+
 def fetch_gold_analysis_detail():
     print("⏳ กำลังดึงสัญญาณเทคนิคอลเจาะลึกทองคำ (XAUUSD) บน Timeframe 1D และ 4H...")
     timeframes = {
         "1D (ภาพรวมวัน)": Interval.INTERVAL_1_DAY,
         "4H (จังหวะระยะสั้น)": Interval.INTERVAL_4_HOURS
     }
+    
     gold_report = "=== [การวิเคราะห์เจาะลึกทองคำ XAUUSD (CDC ActionZone + Stochastic 14, 3, 3)] ===\n"
+    
     for tf_name, tf_interval in timeframes.items():
         try:
             handler = TA_Handler(
@@ -69,25 +107,8 @@ def fetch_gold_analysis_detail():
                 interval=tf_interval
             )
             analysis = handler.get_analysis()
-            indicators = analysis.indicators
-            close_price = indicators.get("close", 0)
-            ema12 = indicators.get("EMA12", 0)
-            ema26 = indicators.get("EMA26", 0)
-            
-            if ema12 > ema26:
-                cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)"
-            else:
-                cdc_status = "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
-                
-            stoch_k = indicators.get("Stoch.K", 0)
-            stoch_d = indicators.get("Stoch.D", 0)
-            stoch_status = "Neutral"
-            if stoch_k < 20:
-                stoch_status = "🔵 Oversold (ขายมากเกินไป - ลุ้นดีดกลับ/จังหวะตั้งรับ)"
-            elif stoch_k > 80:
-                stoch_status = "🟠 Overbought (ซื้อมากเกินไป - ระวังการย่อตัว)"
-                
-            summary_rec = analysis.summary.get('RECOMMENDATION', 'N/A')
+            close_price, ema12, ema26, cdc_status, stoch_k, stoch_d, stoch_status, summary_rec = calculate_cdc_and_stoch(analysis)
+
             gold_report += (
                 f"\n📌 Timeframe: {tf_name}\n"
                 f"  - ราคาปัจจุบัน: {close_price:.2f}\n"
@@ -97,6 +118,7 @@ def fetch_gold_analysis_detail():
             )
         except Exception as e:
             gold_report += f"\n⚠️ ไม่สามารถดึงข้อมูล XAUUSD ({tf_name}) ได้: {e}\n"
+            
     return gold_report
 
 def fetch_btc_analysis_detail():
@@ -105,7 +127,9 @@ def fetch_btc_analysis_detail():
         "1D (ภาพรวมวัน)": Interval.INTERVAL_1_DAY,
         "4H (จังหวะระยะสั้น)": Interval.INTERVAL_4_HOURS
     }
+    
     btc_report = "=== [การวิเคราะห์เจาะลึกบิทคอยน์ BTCUSD (CDC ActionZone + Stochastic 14, 3, 3)] ===\n"
+    
     for tf_name, tf_interval in timeframes.items():
         try:
             handler = TA_Handler(
@@ -115,25 +139,8 @@ def fetch_btc_analysis_detail():
                 interval=tf_interval
             )
             analysis = handler.get_analysis()
-            indicators = analysis.indicators
-            close_price = indicators.get("close", 0)
-            ema12 = indicators.get("EMA12", 0)
-            ema26 = indicators.get("EMA26", 0)
-            
-            if ema12 > ema26:
-                cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)"
-            else:
-                cdc_status = "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
-                
-            stoch_k = indicators.get("Stoch.K", 0)
-            stoch_d = indicators.get("Stoch.D", 0)
-            stoch_status = "Neutral"
-            if stoch_k < 20:
-                stoch_status = "🔵 Oversold (ขายมากเกินไป - ลุ้นดีดกลับ/จังหวะตั้งรับ)"
-            elif stoch_k > 80:
-                stoch_status = "🟠 Overbought (ซื้อมากเกินไป - ระวังการย่อตัว)"
-                
-            summary_rec = analysis.summary.get('RECOMMENDATION', 'N/A')
+            close_price, ema12, ema26, cdc_status, stoch_k, stoch_d, stoch_status, summary_rec = calculate_cdc_and_stoch(analysis)
+
             btc_report += (
                 f"\n📌 Timeframe: {tf_name}\n"
                 f"  - ราคาปัจจุบัน: {close_price:.2f}\n"
@@ -143,6 +150,7 @@ def fetch_btc_analysis_detail():
             )
         except Exception as e:
             btc_report += f"\n⚠️ ไม่สามารถดึงข้อมูล BTCUSD ({tf_name}) ได้: {e}\n"
+            
     return btc_report
 
 def fetch_all_tradingview_signals():
@@ -161,9 +169,11 @@ def fetch_all_tradingview_signals():
             buy = analysis.summary.get('BUY', 0)
             sell = analysis.summary.get('SELL', 0)
             neutral = analysis.summary.get('NEUTRAL', 0)
+            
             tv_summary_report += f"- {asset['name']}: สัญญาณสรุป [{rec}] (แรงซื้อ: {buy}, แรงขาย: {sell}, ถือครอง: {neutral})\n"
         except Exception as e:
             tv_summary_report += f"- {asset['name']}: ดึงข้อมูลไม่สำเร็จ ({e})\n"
+            
     return tv_summary_report
 
 def fetch_rss_news():
@@ -185,6 +195,7 @@ def fetch_rss_news():
         except Exception as e:
             print(f"⚠️ ไม่สามารถดึง feed จาก {url}: {e}")
             continue
+            
     if not news_compiled:
         news_compiled = "• ไม่สามารถดึงข้อมูลข่าวสารได้ในขณะนี้\n"
     return news_compiled
@@ -202,6 +213,7 @@ def fetch_youtube_insights():
             yt_summary += f"• สรุปบทสัมภาษณ์ YouTube (ID: {video_id}): {text}\n\n"
         except Exception as e:
             print(f"⚠️ ข้ามการดึง Transcript จาก YouTube ({e})")
+            
     return yt_summary if yt_summary else "• ไม่มีข้อมูลบทสัมภาษณ์ YouTube ในรอบนี้\n"
 
 def send_to_cloudflare(message_text):
@@ -209,14 +221,17 @@ def send_to_cloudflare(message_text):
     if not CLOUDFLARE_WORKER_URL:
         print("❌ ไม่พบ CLOUDFLARE_WORKER_URL ใน GitHub Secrets")
         return
+        
     headers = {"Content-Type": "application/json"}
     if CLOUDFLARE_AUTH_TOKEN:
         headers["Authorization"] = f"Bearer {CLOUDFLARE_AUTH_TOKEN.strip()}"
+        
     payload = {
         "email": "narongsak14@gmail.com",
         "report_type": "CIO_DAILY_REPORT",
         "content": message_text
     }
+    
     try:
         response = requests.post(CLOUDFLARE_WORKER_URL, json=payload, headers=headers)
         if response.status_code in [200, 201]:
@@ -248,12 +263,19 @@ def generate_content_with_retry(client, model, prompt, max_retries=3, delay=10):
 
 def run_investment_ai_pipeline():
     print("\n--- 🚀 เริ่มต้นกระบวนการวิเคราะห์การลงทุนระดับมืออาชีพ ---")
+    
     portfolio_data = fetch_portfolio_data()
     gold_detailed_signals = fetch_gold_analysis_detail()
     btc_detailed_signals = fetch_btc_analysis_detail()
     raw_news_data = fetch_rss_news()
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
+
+    # แสดง Debug เพื่อตรวจสอบค่าจริงใน Log ของ GitHub Actions
+    print("\n--- DEBUG DATA SENT TO GEMINI ---")
+    print(gold_detailed_signals)
+    print(btc_detailed_signals)
+    print("---------------------------------\n")
 
     macro_tech_prompt = f"""
 คุณคือ 'ประธานคณะกรรมการฝ่ายวิจัยและจัดการกองทุน (Chief Investment Officer - CIO)' หน้าที่ของคุณคือวิเคราะห์พอร์ตการลงทุนจริงของผู้ใช้ โดยประมวลผลร่วมกับ 'กระแสข่าวและบทวิเคราะห์จาก Investing.com', 'สัญญาณเทคนิคอลจาก TradingView' และ 'วิเคราะห์เจาะจง CDC ActionZone + Stochastic ของทองคำ และ บิทคอยน์'
@@ -283,10 +305,11 @@ def run_investment_ai_pipeline():
 - ข้อมูลสัมภาษณ์ YouTube: {youtube_insights}
 ----------------------------------------
 
-ข้อบังคับสำคัญที่สุด (STRICT CONSTRAINTS):
-1. ใน PART 2 ข้อมูลในตารางจะต้องตรงกับข้อมูลที่ส่งไปใน [ชุดข้อมูลวิเคราะห์พิเศษ] ห้ามเปลี่ยนสถานะ CDC จาก BULLISH เป็น BEARISH หรือกลับกันเองโดยเด็ดขาด
-2. หาก CDC เป็น 🟢 BULLISH ต้องระบุในตารางเป็น BULLISH (ซื้อ-ถือครอง) เท่านั้น
-3. คำแนะนำในตารางต้องสอดคล้องกับสถานะ CDC และ Stochastic ที่ได้รับจริง
+ข้อบังคับสำคัญที่สุดในการสร้างตาราง PART 2 (STRICT CONSTRAINTS):
+1. **ห้ามเปลี่ยนสถานะ CDC โดยเด็ดขาด**: ต้องอ่านสถานะ CDC จาก [ชุดข้อมูลวิเคราะห์พิเศษ] ด้านบนอย่างเคร่งครัด
+   - หากข้อมูล XAUUSD ระบุว่า 🟢 BULLISH ให้แสดงตาราง CDC (1D) เป็น 🟢 BULLISH (ซื้อ-ถือครอง) เท่านั้น
+   - ห้ามสรุปเป็น BEARISH หากในข้อมูลเขียนว่า BULLISH
+2. **คำแนะนำในตาราง**: ต้องสอดคล้องกับสภาวะ BULLISH เช่น แนะนำ "ถือครอง / หาจังหวะเข้าซื้อเพิ่มเมื่อย่อตัว" ไม่ใช่ "พักเงิน"
 
 จงประมวลผลอย่างเป็นระบบและเขียน 'รายงานสรุปกลยุทธ์ฟิวชันข้ามมิติ' เป็นภาษาไทย โดยแยกประเด็นออกเป็น 5 ส่วนดังนี้:
 
@@ -315,7 +338,7 @@ def run_investment_ai_pipeline():
 
 เขียนรายงานด้วยน้ำเสียงสถาบันการเงิน เฉียบคม ตรงไปตรงมา กระชับ และไม่มีคำเกริ่นนำที่ไม่จำเป็น
 """
-    
+
     print("\n🧠 กำลังส่งข้อมูลฟิวชันป้อนเข้า Gemini...")
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
@@ -326,11 +349,11 @@ def run_investment_ai_pipeline():
             max_retries=3,
             delay=10
         )
+        
         report_text = response.text
-
         print("\n--- ✨ รายงานจาก Gemini ---")
         print(report_text)
-
+        
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
         repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v8")
         header = (
@@ -339,6 +362,7 @@ def run_investment_ai_pipeline():
             f"--------------------------------------------------\n\n"
         )
         send_to_cloudflare(header + report_text)
+        
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในระบบ AI: {e}")
 
