@@ -2,6 +2,9 @@ import os
 import time
 import requests
 import feedparser
+import pandas as pd
+import pandas_ta as ta
+import requests
 from google import genai
 from google.genai.errors import APIError
 from tradingview_ta import TA_Handler, Interval
@@ -87,6 +90,147 @@ def fetch_ktam_fund_data():
         fund_report += f"⚠️ ไม่สามารถดึงข้อมูล NAV กองทุนได้: {e}\n"
         
     return fund_report
+    
+#++++++++++++++++++++++++++++++++++++++++++++++
+#สำหรับคำนวณสัญญาณเทคนิคอล RMF1
+def fetch_rmf1_nav_sec_api():
+    """ดึงราคา NAV ย้อนหลังของกองทุน RMF1 จาก SEC Open API (สำนักงาน ก.ล.ต.)"""
+    # Endpoint ข้อมูล NAV กองทุนรวมของ ก.ล.ต.
+    url = "https://api.sec.or.th/FundFactsheet/fund/daily_nav/M0000_2545"  # ตัวอย่าง API Endpoint
+
+    # หรือสามารถดึงจาก Open API Alternative / Custom Scraper
+    # ในกรณีตัวอย่างนี้จำลองโครงสร้าง DataFrame ข้อมูลราคาปิดย้อนหลัง (EOD NAV)
+    headers = {"Ocp-Apim-Subscription-Key": "YOUR_SEC_API_KEY"}
+
+    try:
+        # response = requests.get(url, headers=headers, timeout=10)
+        # data = response.json()
+        # df = pd.DataFrame(data)
+
+        # จำลองข้อมูล DataFrame ราคา NAV ย้อนหลังของ RMF1
+        # (โครงสร้างจริงประกอบด้วย คอลัมน์ 'date' และ 'nav_price')
+        pass
+    except Exception as e:
+        print(f"Error fetching SEC API: {e}")
+
+
+def calculate_rmf1_technical_signals(df_nav):
+    """คำนวณอินดิเคเตอร์ทางเทคนิค WMA, MACD, RSI สำหรับ RMF1
+
+    df_nav ต้องมีคอลัมน์ 'close' (ราคา NAV) และเรียงลำดับจากอดีต -> ปัจจุบัน
+    """
+    df = df_nav.copy()
+
+    # 1. คำนวณ WMA (12, 26) ตาม SiamChart
+    df["WMA12"] = ta.wma(df["close"], length=12)
+    df["WMA26"] = ta.wma(df["close"], length=26)
+
+    # 2. คำนวณ MACD Cross (12, 26, 9)
+    macd = ta.macd(df["close"], fast=12, slow=26, signal=9)
+    df["MACD"] = macd["MACD_12_26_9"]
+    df["MACD_Signal"] = macd["MACDs_12_26_9"]
+    df["MACD_Hist"] = macd["MACDh_12_26_9"]
+
+    # 3. คำนวณ RSI Cross (14)
+    df["RSI14"] = ta.rsi(df["close"], length=14)
+
+    # อ่านค่าแท่งล่าสุด (Latest Row)
+    latest = df.iloc[-1]
+    prev = df.iloc[-2]
+
+    # แปลงสัญญาณ WMA Trend
+    wma_status = "🟢 BULLISH (ขาขึ้น)" if latest["WMA12"] > latest["WMA26"] else "🔴 BEARISH (ขาลง)"
+
+    # แปลงสัญญาณ MACD Cross
+    macd_cross = "Neutral"
+    if prev["MACD"] < prev["MACD_Signal"] and latest["MACD"] > latest["MACD_Signal"]:
+        macd_cross = "🟢 Golden Cross (สัญญาณซื้อ)"
+    elif prev["MACD"] > prev["MACD_Signal"] and latest["MACD"] < latest["MACD_Signal"]:
+        macd_cross = "🔴 Death Cross (สัญญาณขาย)"
+
+    # แปลงสัญญาณ RSI
+    rsi_val = latest["RSI14"]
+    rsi_status = "Neutral"
+    if rsi_val > 70:
+        rsi_status = "🟠 Overbought (ซื้อมากเกินไป)"
+    elif rsi_val < 30:
+        rsi_status = "🔵 Oversold (ขายมากเกินไป)"
+
+    return {
+        "close_nav": latest["close"],
+        "wma12": latest["WMA12"],
+        "wma26": latest["WMA26"],
+        "wma_status": wma_status,
+        "macd": latest["MACD"],
+        "macd_signal": latest["MACD_Signal"],
+        "macd_cross": macd_cross,
+        "rsi": rsi_val,
+        "rsi_status": rsi_status,
+    }
+
+
+# ==========================================
+# ตัวอย่างการทดสอบรันคำนวณข้อมูล
+# ==========================================
+if __name__ == "__main__":
+    # ตัวอย่างข้อมูลราคา NAV ย้อนหลัง 30 วัน
+    dummy_data = {
+        "close": [
+            62.10,
+            62.15,
+            62.20,
+            62.30,
+            62.25,
+            62.40,
+            62.55,
+            62.60,
+            62.80,
+            63.00,
+            63.10,
+            63.25,
+            63.50,
+            63.80,
+            64.10,
+            64.50,
+            65.00,
+            65.20,
+            65.80,
+            66.10,
+            66.50,
+            66.80,
+            67.00,
+            67.15,
+            67.20,
+            67.30,
+            67.25,
+            67.28,
+            67.32,
+            67.49,
+        ]
+    }
+    df_sample = pd.DataFrame(dummy_data)
+
+    result = calculate_rmf1_technical_signals(df_sample)
+
+    print("=== [สรุปสัญญาณเทคนิคอล RMF1] ===")
+    print(f"ราคา NAV ล่าสุด: {result['close_nav']:.4f} บาท")
+    print(f"WMA(12): {result['wma12']:.4f} | WMA(26): {result['wma26']:.4f} -> สถานะ: {result['wma_status']}")
+    print(f"MACD: {result['macd']:.4f} | Signal: {result['macd_signal']:.4f} -> สัญญาณ: {result['macd_cross']}")
+    print(f"RSI(14): {result['rsi']:.2f} -> สภาวะ: {result['rsi_status']}")
+#----------------------------------------
+def fetch_rmf1_analysis_detail():
+    # เรียกใช้ฟังก์ชันคำนวณด้านบน
+    result = calculate_rmf1_technical_signals(df_nav_data)
+
+    rmf1_report = (
+        "=== [การวิเคราะห์เทคนิคอล KTB RMF1 (WMA + MACD + RSI)] ===\n"
+        f"  - ราคา NAV ล่าสุด: {result['close_nav']:.4f}\n"
+        f"  - สัญญาณ WMA (12/26): {result['wma_status']} (WMA12: {result['wma12']:.2f}, WMA26: {result['wma26']:.2f})\n"
+        f"  - สัญญาณ MACD: {result['macd_cross']} (MACD: {result['macd']:.4f})\n"
+        f"  - RSI (14): {result['rsi']:.2f} [{result['rsi_status']}]\n"
+    )
+    return rmf1_report
+#+++++++++++++++++++++++++++++++++++++++++++++
 
 def calculate_cdc_and_stoch(handler_analysis):
     """ฟังก์ชันช่วยประมวลผล CDC ActionZone และ Stochastic อย่างถูกต้อง"""
