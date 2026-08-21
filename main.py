@@ -15,13 +15,16 @@ from youtube_transcript_api import YouTubeTranscriptApi
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
-# URL สำหรับดึงข้อมูลพอร์ตการลงทุน (อันเดิม)
+
+# URL สำหรับดึงข้อมูลพอร์ตการลงทุน
 PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
+
 YOUTUBE_VIDEO_IDS = [""]
 
-# ใส่ URL ที่ได้จากการ Publish Google Sheet เป็น CSV ตรงนี้
+# URL สำหรับดึงรายการ ASSETS จาก Google Sheet (ตรวจสอบชื่อตัวแปรให้ตรงตามนี้)
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQ0kXAK-9S6ckGgHk3F7N1BGsaqDv4zwR/pub?gid=1067250335&single=true&output=csv"
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M22WZq781y1pEwbXihk0iOar0xyx2ZIo776WgbdQ0kXAK-9S6ckGgHk3F7N1BGsaqDv4zwR/pub?gid=1067250335&single=true&output=csv"
+
+
 # ==========================================
 # ฟังก์ชันดึง ASSETS จาก Google Sheet
 # ==========================================
