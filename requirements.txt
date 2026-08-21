@@ -1,5 +1,7 @@
+pandas
+pandas-ta
+requests
 google-genai
 tradingview-ta
 feedparser
-requests
 youtube-transcript-api
