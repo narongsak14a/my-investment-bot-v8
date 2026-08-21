@@ -255,7 +255,7 @@ def run_investment_ai_pipeline():
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
 
-    macro_tech_prompt = f"""
+macro_tech_prompt = f"""
 คุณคือ 'ประธานคณะกรรมการฝ่ายวิจัยและจัดการกองทุน (Chief Investment Officer - CIO)' หน้าที่ของคุณคือวิเคราะห์พอร์ตการลงทุนจริงของผู้ใช้ โดยประมวลผลร่วมกับ 'กระแสข่าวและบทวิเคราะห์จาก Investing.com', 'สัญญาณเทคนิคอลจาก TradingView' และ 'วิเคราะห์เจาะจง CDC ActionZone + Stochastic ของทองคำ และ บิทคอยน์'
 
 [เป้าหมายและเงื่อนไขการลงทุนของผู้ใช้]
@@ -282,6 +282,11 @@ def run_investment_ai_pipeline():
 - ข่าวสารการเงินและบทวิเคราะห์ Investing.com: {raw_news_data}
 - ข้อมูลสัมภาษณ์ YouTube: {youtube_insights}
 ----------------------------------------
+
+ข้อบังคับสำคัญที่สุด (STRICT CONSTRAINTS):
+1. ใน PART 2 ข้อมูลในตารางจะต้องตรงกับข้อมูลที่ส่งไปใน [ชุดข้อมูลวิเคราะห์พิเศษ] ห้ามเปลี่ยนสถานะ CDC จาก BULLISH เป็น BEARISH หรือกลับกันเองโดยเด็ดขาด
+2. หาก CDC เป็น 🟢 BULLISH ต้องระบุในตารางเป็น BULLISH (ซื้อ-ถือครอง) เท่านั้น
+3. คำแนะนำในตารางต้องสอดคล้องกับสถานะ CDC และ Stochastic ที่ได้รับจริง
 
 จงประมวลผลอย่างเป็นระบบและเขียน 'รายงานสรุปกลยุทธ์ฟิวชันข้ามมิติ' เป็นภาษาไทย โดยแยกประเด็นออกเป็น 5 ส่วนดังนี้:
 
@@ -310,7 +315,6 @@ def run_investment_ai_pipeline():
 
 เขียนรายงานด้วยน้ำเสียงสถาบันการเงิน เฉียบคม ตรงไปตรงมา กระชับ และไม่มีคำเกริ่นนำที่ไม่จำเป็น
 """
-
     print("\n🧠 กำลังส่งข้อมูลฟิวชันป้อนเข้า Gemini...")
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
