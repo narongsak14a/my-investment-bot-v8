@@ -235,6 +235,54 @@ def fetch_rmf1_analysis_detail():
         f"  - RSI (14): {result['rsi']:.2f} [{result['rsi_status']}]\n"
     )
     return rmf1_report
+    def fetch_rmf1_analysis_detail():
+    # สมมติว่าดึงค่า WMA12, WMA26, RSI และ Stochastic มาแล้ว
+    wma12 = result['wma12']
+    wma26 = result['wma26']
+    rsi = result['rsi']
+    
+    # คำนวณระยะห่างระหว่างเส้น (Spread) เพื่อดูแนวโน้มการตัดกัน
+    wma_gap_pct = ((wma12 - wma26) / wma26) * 100
+    
+    # ตรวจสอบเงื่อนไขการลดพอร์ต
+    # 1. WMA12 ตัด WMA26 ลงมาแล้ว (Death Cross) OR
+    # 2. WMA12 กำลังบีบเข้าหา WMA26 (ห่างกันน้อยกว่า 0.5%) ในขณะที่ RSI Overbought (> 80)
+    if wma12 < wma26:
+        action_recommendation = "🔴 [REDUCE PORTFOLIO] ลดพอร์ต RMF1 ทันที และ Switching ไปยัง KTB RMF4 เพื่อปกป้องเงินต้น (เกิด Death Cross)"
+        suggested_weight = "0% - 10%"
+    elif wma_gap_pct < 0.5 and rsi > 80:
+        action_recommendation = "⚠️ [TAKE PROFIT / REDUCE] แนวโน้ม WMA12 ใกล้ตัด WMA26 ลง + RSI/Stoch อยู่ในภาวะ Overbought รุนแรง แนะนำให้เริ่มทยอยลดพอร์ต RMF1 ลง 10%-20% เพื่อล็อกกำไร แล้วย้ายเงินเข้า KTB RMF4"
+        suggested_weight = "10% - 20%"
+    else:
+        action_recommendation = "🟢 [BUY / DCA] ปรับพอร์ต RMF1 สูงขึ้น เน้นทยอยสะสมตามจังหวะย่อตัว"
+        suggested_weight = "30% - 40%"
+
+    return {
+        "action": action_recommendation,
+        "weight": suggested_weight,
+        "gap": wma_gap_pct
+    }
+    # 1. เงื่อนไข: เกิด Death Cross หรือแนวโน้มใกล้ตัดลง + Overbought (แนะนำลดพอร์ต)
+    if wma12 < wma26:
+        action_recommendation = "🔴 [REDUCE PORTFOLIO] ลดพอร์ต RMF1 ทันที และ Switching ไปยัง KTB RMF4 เพื่อปกป้องเงินต้น (เกิด Death Cross)"
+        suggested_weight = "0% - 10%"
+        
+    elif wma_gap_pct < 0.5 and rsi > 80:
+        action_recommendation = "⚠️ [TAKE PROFIT / REDUCE] WMA12 ชะลอตัวใกล้ตัด WMA26 ลง + RSI/Stoch Overbought แนะนำทยอยลดพอร์ต RMF1 ล็อกกำไร แล้วย้ายเข้า KTB RMF4"
+        suggested_weight = "10% - 20%"
+
+    # 2. เงื่อนไข: MA12 ตัดขึ้นเหนือ MA26 ชัดเจน (แนะนำเพิ่มพอร์ต / DCA)
+    elif wma12 > wma26:
+        if rsi > 80:
+            action_recommendation = "🟢 [BUY ON DIP] MA12 ตัดขึ้นเหนือ MA26 (Golden Cross) แนะนำปรับพอร์ต RMF1 สูงขึ้น แต่เนื่องจาก RSI Overbought ให้ใช้วิธีทยอย DCA/ตั้งรับเมื่อย่อตัว"
+        else:
+            action_recommendation = "🟢 [STRONG BUY] MA12 ตัดขึ้นเหนือ MA26 (Golden Cross) สัญญาณขาขึ้นชัดเจน แนะนำปรับพอร์ต RMF1 สูงขึ้น"
+        suggested_weight = "30% - 40%"
+
+    # 3. กรณีอื่นๆ
+    else:
+        action_recommendation = "🟡 [HOLD] รอดูทิศทางสัญญาณ"
+        suggested_weight = "20%"
 #+++++++++++++++++++++++++++++++++++++++++++++
 
 def calculate_cdc_and_stoch(handler_analysis):
@@ -499,6 +547,16 @@ def run_investment_ai_pipeline():
 [ชุดข้อมูลวิเคราะห์พิเศษ: กองทุนรวม KTB RMF1]
 ----------------------------------------
 {rmf1_signals}
+----------------------------------------
+[เงื่อนไขและกฎคำแนะนำปรับพอร์ต KTB RMF1]
+    - สถานะการวิเคราะห์ปัจจุบัน: {rmf1_analysis['action']}
+    - สัดส่วนเป้าหมายแนะนำ: {rmf1_analysis['weight']}
+
+    [คำสั่งสำหรับสรุปตาราง KTB RMF1]
+    ให้แสดงรายละเอียดตารางวิเคราะห์ KTB RMF1 ดังนี้:
+    1. หาก WMA12 ใกล้ตัด WMA26 ลงมา ร่วมกับ RSI/Stochastic Overbought:
+       - ช่อง 'กลยุทธ์การปรับพอร์ต': ระบุให้ชัดเจนว่า "แนะนำลดพอร์ต RMF1 และทำ Switching ไปยัง KTB RMF4 เพื่อลดความเสี่ยงและล็อกกำไร"
+       - ช่อง 'สัดส่วนแนะนำ (%)': ให้ปรับลดลงตามคำสั่งข้างต้น
 ----------------------------------------
 [ชุดข้อมูลวิเคราะห์พิเศษ: ทองคำโลก XAUUSD (1D & 4H)]
 ----------------------------------------
