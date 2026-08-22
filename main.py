@@ -1,9 +1,7 @@
-import os  # <-- เพิ่มบรรทัดนี้เข้ามา
+import os
 import pandas as pd
 import requests
 
-# ส่วนประกาศตัวแปรด้านบนสุดของ main.py
-#CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL") or "https://dry-voice-2e82.narongsak14.workers.dev/"
 # ==========================================
 # 1. ตั้งค่า URL สำหรับดึงข้อมูล CSV จาก Google Sheets
@@ -15,7 +13,7 @@ NEED_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M2
 PORTFOLIO_URL = "https://example.com/fallback_portfolio.txt"
 
 # ==========================================
-# 2. ฟังก์ชันดึงข้อมูลพอร์ต ( asset + investment + comments )
+# 2. ฟังก์ชันดึงข้อมูลพอร์ต
 # ==========================================
 def fetch_portfolio_data():
     print("⏳ กำลังดึงข้อมูลพอร์ตจาก Google Sheet (asset & investment)...")
@@ -23,7 +21,6 @@ def fetch_portfolio_data():
         df_asset = pd.read_csv(ASSET_SHEET_CSV_URL)
         df_investment = pd.read_csv(INVESTMENT_SHEET_CSV_URL)
         
-        # จัดการคอลัมน์ comment (หากไม่มีข้อมูลใส่ '-' เพื่อความสะอาดของตาราง)
         if 'comment' in df_asset.columns:
             df_asset['comment'] = df_asset['comment'].fillna('-')
         if 'comment' in df_investment.columns:
@@ -51,12 +48,11 @@ def fetch_portfolio_data():
             return "• ไม่พบข้อมูลพอร์ตการลงทุน"
 
 # ==========================================
-# 3. ฟังก์ชันดึงคำสั่งพิเศษจากชีท NEED (รองรับข้อความไร้ Header)
+# 3. ฟังก์ชันดึงคำสั่งพิเศษจากชีท NEED
 # ==========================================
 def fetch_user_needs():
     print("⏳ กำลังดึงคำสั่งพิเศษจากชีท NEED...")
     try:
-        # ใช้ header=None เพื่ออ่านข้อความตั้งแต่บรรทัดแรก โดยไม่ข้ามข้อความไปเป็นชื่อคอลัมน์
         df_need = pd.read_csv(NEED_SHEET_CSV_URL, header=None)
         
         all_text_list = []
@@ -80,7 +76,7 @@ def fetch_user_needs():
         return "• ไม่สามารถดึงคำสั่งพิเศษจากชีท NEED ได้"
 
 # ==========================================
-# 4. ฟังก์ชันสร้าง Prompt คงโครงสร้างการรายงานเดิม + เน้นวิเคราะห์ comment & NEED
+# 4. ฟังก์ชันสร้าง Prompt
 # ==========================================
 def run_investment_ai_pipeline():
     portfolio_data = fetch_portfolio_data()
@@ -121,15 +117,34 @@ def run_investment_ai_pipeline():
 **4. แผนการดำเนินการและคำแนะนำการปรับพอร์ต (Action Plan)**
 - ให้คำแนะนำเชิงรุก เช่น การ Rebalancing, การ Switching กองทุน หรือการวางแผนเงินสำรองสภาพคล่อง ที่ตอบโจทย์ความต้องการในชีท NEED และสอดคล้องกับ comment ในพอร์ตอย่างเป็นรูปธรรม
 """
-    
-    #print("🚀 พร้อมส่ง Prompt วิเคราะห์ตามโครงสร้างเดิมเรียบร้อย!")
-    #++++++++++++++++++++
-    print("🚀 พร้อมส่ง Prompt วิเคราะห์ตามโครงสร้างเดิมเรียบร้อย!")
-    # บรรทัดที่ 122 สามารถเรียกใช้ตัวแปรได้ทันที
-    print(f"🤖 กำลังส่งรายงานไปยัง Cloudflare ({CLOUDFLARE_WORKER_URL})...")
-#++++++++++++++++++++++++++++++++++++++++++++++++++++
-    
     return macro_tech_prompt
+
+# ==========================================
+# 5. ฟังก์ชันสำหรับส่งข้อมูลไปยัง Cloudflare Worker (ส่วนที่เพิ่มเข้ามา)
+# ==========================================
+def send_to_cloudflare(payload_data):
+    print(f"🤖 กำลังส่งรายงานไปยัง Cloudflare ({CLOUDFLARE_WORKER_URL})...")
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "prompt": payload_data,
+        "source": "Python Investment Pipeline"
+    }
+    
+    try:
+        response = requests.post(CLOUDFLARE_WORKER_URL, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            print("🎉 ส่งข้อมูลไปยัง Cloudflare Worker สำเร็จ!")
+            return response.json() if response.headers.get("Content-Type") == "application/json" else response.text
+        else:
+            print(f"❌ การส่งข้อมูลล้มเหลว (Status Code: {response.status_code}): {response.text}")
+            return None
+    except Exception as e:
+        print(f"💥 เกิดข้อผิดพลาดในการเชื่อมต่อกับ Cloudflare: {e}")
+        return None
 
 if __name__ == "__main__":
     prompt_result = run_investment_ai_pipeline()
+    print("🚀 พร้อมส่ง Prompt วิเคราะห์ตามโครงสร้างเดิมเรียบร้อย!")
+    
+    # เรียกใช้ฟังก์ชันส่งข้อมูลไปยัง Cloudflare Worker
+    response_result = send_to_cloudflare(prompt_result)
