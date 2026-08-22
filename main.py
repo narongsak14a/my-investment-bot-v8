@@ -1,8 +1,13 @@
 import os
+import json
 import pandas as pd
 import requests
 
+# ==========================================
+# 0. ตั้งค่า URL สื่อสาร
+# ==========================================
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL") or "https://dry-voice-2e82.narongsak14.workers.dev/"
+
 # ==========================================
 # 1. ตั้งค่า URL สำหรับดึงข้อมูล CSV จาก Google Sheets
 # ==========================================
@@ -13,7 +18,7 @@ NEED_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyU-ww2M2
 PORTFOLIO_URL = "https://example.com/fallback_portfolio.txt"
 
 # ==========================================
-# 2. ฟังก์ชันดึงข้อมูลพอร์ต
+# 2. ฟังก์ชันดึงข้อมูลพอร์ต ( asset + investment + comments )
 # ==========================================
 def fetch_portfolio_data():
     print("⏳ กำลังดึงข้อมูลพอร์ตจาก Google Sheet (asset & investment)...")
@@ -21,6 +26,7 @@ def fetch_portfolio_data():
         df_asset = pd.read_csv(ASSET_SHEET_CSV_URL)
         df_investment = pd.read_csv(INVESTMENT_SHEET_CSV_URL)
         
+        # จัดการคอลัมน์ comment (หากไม่มีข้อมูลใส่ '-' เพื่อความสะอาดของตาราง)
         if 'comment' in df_asset.columns:
             df_asset['comment'] = df_asset['comment'].fillna('-')
         if 'comment' in df_investment.columns:
@@ -48,11 +54,12 @@ def fetch_portfolio_data():
             return "• ไม่พบข้อมูลพอร์ตการลงทุน"
 
 # ==========================================
-# 3. ฟังก์ชันดึงคำสั่งพิเศษจากชีท NEED
+# 3. ฟังก์ชันดึงคำสั่งพิเศษจากชีท NEED (รองรับข้อความไร้ Header)
 # ==========================================
 def fetch_user_needs():
     print("⏳ กำลังดึงคำสั่งพิเศษจากชีท NEED...")
     try:
+        # ใช้ header=None เพื่ออ่านข้อความตั้งแต่บรรทัดแรก โดยไม่ข้ามข้อความไปเป็นชื่อคอลัมน์
         df_need = pd.read_csv(NEED_SHEET_CSV_URL, header=None)
         
         all_text_list = []
@@ -120,21 +127,30 @@ def run_investment_ai_pipeline():
     return macro_tech_prompt
 
 # ==========================================
-# 5. ฟังก์ชันสำหรับส่งข้อมูลไปยัง Cloudflare Worker (ส่วนที่เพิ่มเข้ามา)
+# 5. ฟังก์ชันส่งข้อมูลไปยัง Cloudflare Worker (รองรับ ภาษาไทย utf-8)
 # ==========================================
 def send_to_cloudflare(payload_data):
     print(f"🤖 กำลังส่งรายงานไปยัง Cloudflare ({CLOUDFLARE_WORKER_URL})...")
-    headers = {"Content-Type": "application/json"}
+    
+    headers = {"Content-Type": "application/json; charset=utf-8"}
     payload = {
         "prompt": payload_data,
         "source": "Python Investment Pipeline"
     }
     
+    # แปลง payload เป็น JSON โดยตั้งค่า ensure_ascii=False เพื่อให้ส่งภาษาไทยตรงๆ ไม่แปลงเป็น \uXXXX
+    json_bytes = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+    
     try:
-        response = requests.post(CLOUDFLARE_WORKER_URL, json=payload, headers=headers, timeout=30)
+        response = requests.post(
+            CLOUDFLARE_WORKER_URL, 
+            data=json_bytes, 
+            headers=headers, 
+            timeout=30
+        )
         if response.status_code == 200:
             print("🎉 ส่งข้อมูลไปยัง Cloudflare Worker สำเร็จ!")
-            return response.json() if response.headers.get("Content-Type") == "application/json" else response.text
+            return response.text
         else:
             print(f"❌ การส่งข้อมูลล้มเหลว (Status Code: {response.status_code}): {response.text}")
             return None
@@ -146,5 +162,5 @@ if __name__ == "__main__":
     prompt_result = run_investment_ai_pipeline()
     print("🚀 พร้อมส่ง Prompt วิเคราะห์ตามโครงสร้างเดิมเรียบร้อย!")
     
-    # เรียกใช้ฟังก์ชันส่งข้อมูลไปยัง Cloudflare Worker
-    response_result = send_to_cloudflare(prompt_result)
+    # ส่งข้อมูลไปยัง Cloudflare Worker
+    send_to_cloudflare(prompt_result)
