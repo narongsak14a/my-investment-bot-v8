@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
-
+# ส่วนประกาศตัวแปรด้านบนสุดของ main.py
+CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL") 
 # ==========================================
 # 1. ตั้งค่า URL สำหรับดึงข้อมูล CSV จาก Google Sheets
 # ==========================================
