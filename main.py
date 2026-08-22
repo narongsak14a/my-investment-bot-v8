@@ -119,6 +119,7 @@ def run_investment_ai_pipeline():
 """
     
     print("🚀 พร้อมส่ง Prompt วิเคราะห์ตามโครงสร้างเดิมเรียบร้อย!")
+    print(f"🤖 กำลังส่งรายงานไปยัง Cloudflare ({CLOUDFLARE_WORKER_URL})...")
     return macro_tech_prompt
 
 if __name__ == "__main__":
